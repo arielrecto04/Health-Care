@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Doctor;
 use App\Http\Resources\DoctorResource;
+use App\Models\DoctorSpecialty;
+use App\Models\Hmo;
 
 class DoctorController extends Controller
 {
@@ -56,4 +58,17 @@ class DoctorController extends Controller
             'user' => $user->load('profile.doctor.specialty'),
         ]);
     }
+
+    public function getSpecialties()
+    {
+        $specialties = DoctorSpecialty::all(['id', 'name']);
+        return response()->json($specialties);
+    }
+
+    public function getHmos()
+    {
+        $hmos = Hmo::all(['id', 'name']); // select id and name
+        return response()->json($hmos);
+    }
+
 }

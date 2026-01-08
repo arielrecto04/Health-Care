@@ -11,22 +11,23 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\PrescriptionController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ServiceController;
 
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/about', function () {
     return view('about');
 })->name('about');
 
-Route::get('/services', function () {
-    return view('services');
-})->name('services');
+Route::get('/services', [ServiceController::class, 'index'])->name('services');
 
 Route::get('/doctor', function () {
     return view('doctor');
 })->name('doctor');
+
+Route::get('/doctor/specialties', [DoctorController::class, 'getSpecialties']);
+Route::get('/doctor/hmos', [DoctorController::class, 'getHmos']);
 
 Route::get('/contact', function () {
     return view('contact');

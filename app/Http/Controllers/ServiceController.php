@@ -12,7 +12,7 @@ class ServiceController extends Controller
     {
         $categories = ServiceCategory::with('services')->get();
 
-        return ServiceCategoryResource::collection($categories);
+        return view('services', compact('categories'));
 
     }
 }

@@ -22,57 +22,26 @@
     <x-section title="Quality Care, Tailored for You">
         <div class="flex flex-col gap-20 items-center">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-                <div>
-                    <x-card.service title="Lorem ipsum."
-                        description="Lorem ipsum dolor sit amet consectetur adipiscing elit. Amet consectetur adipiscing elit quisque faucibus ex sapien. Quisque faucibus ex sapien vitae pellentesque sem placerat. Vitae pellentesque sem placerat in id cursus mi."
-                        icon="pi pi-building">
-                    </x-card.service>
-                </div>
-                <div>
-                    <x-card.service title="Lorem ipsum."
-                        description="Lorem ipsum dolor sit amet consectetur adipiscing elit. Amet consectetur adipiscing elit quisque faucibus ex sapien. Quisque faucibus ex sapien vitae pellentesque sem placerat. Vitae pellentesque sem placerat in id cursus mi."
-                        icon="pi pi-building">
-                    </x-card.service>
-                </div>
-                <div>
-                    <x-card.service title="Lorem ipsum."
-                        description="Lorem ipsum dolor sit amet consectetur adipiscing elit. Amet consectetur adipiscing elit quisque faucibus ex sapien. Quisque faucibus ex sapien vitae pellentesque sem placerat. Vitae pellentesque sem placerat in id cursus mi."
-                        icon="pi pi-building">
-                    </x-card.service>
-                </div>
-                <div>
-                    <x-card.service title="Lorem ipsum."
-                        description="Lorem ipsum dolor sit amet consectetur adipiscing elit. Amet consectetur adipiscing elit quisque faucibus ex sapien. Quisque faucibus ex sapien vitae pellentesque sem placerat. Vitae pellentesque sem placerat in id cursus mi."
-                        icon="pi pi-building">
-                    </x-card.service>
-                </div>
-                <div>
-                    <x-card.service title="Lorem ipsum."
-                        description="Lorem ipsum dolor sit amet consectetur adipiscing elit. Amet consectetur adipiscing elit quisque faucibus ex sapien. Quisque faucibus ex sapien vitae pellentesque sem placerat. Vitae pellentesque sem placerat in id cursus mi."
-                        icon="pi pi-building">
-                    </x-card.service>
-                </div>
-                <div>
-                    <x-card.service title="Lorem ipsum."
-                        description="Lorem ipsum dolor sit amet consectetur adipiscing elit. Amet consectetur adipiscing elit quisque faucibus ex sapien. Quisque faucibus ex sapien vitae pellentesque sem placerat. Vitae pellentesque sem placerat in id cursus mi."
-                        icon="pi pi-building">
-                    </x-card.service>
-                </div>
+                @foreach ($service_categories as $category)
+                    <div>
+                        <x-card.service
+                            :title="$category->name"
+                            :description="$category->description"
+                            icon="pi pi-building">
+                        </x-card.service>
+                    </div>
+                @endforeach
             </div>
             <div data-vue="Button" data-label="Explore Our Services"></div>
         </div>
     </x-section>
     <x-section title="Meet Our Expert Doctors">
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 lg:px-18 xl:px-38 gap-10">
-            <div class="flex flex-col justify-center items-center">
-                <x-card.doctor />
-            </div>
-            <div class="flex flex-col justify-center items-center">
-                <x-card.doctor />
-            </div>
-            <div class="flex flex-col justify-center items-center">
-                <x-card.doctor />
-            </div>
+            @foreach ($doctors as $doctor)
+                <div class="flex flex-col justify-center items-center">
+                    <x-card.doctor :doctor="$doctor" />
+                </div>
+            @endforeach
         </div>
     </x-section>
     <x-section>

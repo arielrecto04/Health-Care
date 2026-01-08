@@ -68,4 +68,9 @@ class User extends Authenticatable
             $user->profile()->delete();
         });
     }
+
+    public function doctor()
+    {
+        return $this->hasOne(\App\Models\Doctor::class, 'profile_id', 'id');
+    }
 }
