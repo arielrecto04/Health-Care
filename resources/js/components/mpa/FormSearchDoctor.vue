@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
+const name = ref('');
 import axios from "axios";
 
 import Button from "primevue/button";
@@ -36,6 +37,34 @@ onMounted(() => {
 
 const selectedDays = ref([]);
 const selectedTime = ref(null);
+const resultsHtml = ref('');
+
+const search = async () => {
+    try {
+        const payload = {
+            // use v-model bound name value and trim whitespace
+            name: (name.value || '').toString().trim() || null,
+            specialty: selectedSpecialty.value,
+            hmo: selectedHmo.value,
+            // send days normalized to lowercase to match database values (e.g. 'monday')
+            days: (selectedDays.value || []).map(d => (d || '').toString().toLowerCase()),
+            time: selectedTime.value,
+        };
+
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const headers = {};
+        if (tokenMeta) headers['X-CSRF-TOKEN'] = tokenMeta.getAttribute('content');
+
+        const res = await axios.post('/doctor/search', payload, { headers });
+        if (res.data && typeof res.data.count !== 'undefined' && res.data.count === 0) {
+            resultsHtml.value = '<p class="text-center text-muted">No doctors found</p>';
+        } else {
+            resultsHtml.value = res.data.html || '';
+        }
+    } catch (err) {
+        console.error('Search failed', err?.response?.data || err);
+    }
+};
 
 </script>
 <template>
@@ -44,7 +73,7 @@ const selectedTime = ref(null);
             <div class="flex flex-col md:flex-row gap-4">
                 <FormField class="flex-1">
                     <FloatLabel variant="on">
-                        <InputText id="name" type="text" fluid />
+                        <InputText id="name" type="text" v-model="name" fluid />
                         <label for="name">Doctor's Name</label>
                     </FloatLabel>
                 </FormField>
@@ -101,8 +130,9 @@ const selectedTime = ref(null);
                 </div>
             </div>
             <div class="flex flex-row justify-end">
-                <Button label="Search Doctor" />
+                <Button label="Search Doctor" type="button" @click="search" />
             </div>
         </div>
     </Form>
+    <div class="mt-6" v-if="resultsHtml" v-html="resultsHtml"></div>
 </template>

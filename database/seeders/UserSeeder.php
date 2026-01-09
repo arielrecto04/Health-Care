@@ -56,6 +56,20 @@ class UserSeeder extends Seeder
                      'contact_email' => 'patient@patient.com',
                  ],
              ],
+            [
+             'email' => 'staff@staff.com',
+                 'password' => bcrypt('testtest'),
+                 'role' => 'staff',
+                 'profile' => [
+                     'first_name' => 'Staff',
+                     'middle_name' => 'Staff',
+                     'last_name' => 'One',
+                     'date_of_birth' => '1999-09-20',
+                     'gender' => 'female',
+                     'phone_number' => '(+63) 912 345 6789',
+                     'contact_email' => 'staff@staff.com',
+                 ],
+             ],
          ];
 
         foreach ($users as $data) {

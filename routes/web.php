@@ -28,6 +28,8 @@ Route::get('/doctor', function () {
 
 Route::get('/doctor/specialties', [DoctorController::class, 'getSpecialties']);
 Route::get('/doctor/hmos', [DoctorController::class, 'getHmos']);
+Route::post('/doctor/search', [DoctorController::class, 'search']);
+
 
 Route::get('/contact', function () {
     return view('contact');
