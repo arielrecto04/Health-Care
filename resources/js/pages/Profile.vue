@@ -468,16 +468,30 @@ async function onSubmitSchedule() {
             >
                 <div class="flex flex-col gap-4">
                     <div
-                        class="flex flex-col md:flex-row gap-4 md:items-center"
+                        class="flex flex-col md:flex-row gap-4 md:items-start"
                     >
-                        <div class="w-full h-full sm:size-54">
+                        <div class="aspect-square w-full max-w-54 md:mt-6">
                             <img
                                 :src="isEditingPersonal ? (formDoctorPersonal.profile_picture_preview || user.profile_picture_url || 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png') : (user.profile_picture_url || 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png')"
                                 alt="Profile Picture"
                                 class="w-full h-full border rounded-md border-color object-cover"
                             />
                             <div v-if="isEditingPersonal" class="mt-2">
-                                <input type="file" accept="image/*" @change="onFileChange" />
+                                <input
+                                    id="profilePic"
+                                    type="file"
+                                    accept="image/*"
+                                    class="hidden"
+                                    @change="onFileChange"
+                                />
+                                <div v-if="isEditingPersonal" class="mt-2 flex justify-center">
+                                    <label
+                                        for="profilePic"
+                                        class="cursor-pointer text-sm text-primary opacity-50 hover:opacity-100"
+                                    >
+                                        Change profile picture
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         <div class="flex flex-col md:flex-grow gap-4">
