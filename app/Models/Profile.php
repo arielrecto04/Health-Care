@@ -15,8 +15,12 @@ class Profile extends Model
         'date_of_birth',
         'gender',
         'phone_number',
-        'contact_email'
+        'contact_email',
+        'profile_picture'
     ];
+
+    // include computed URL in serialized output
+    protected $appends = ['profile_picture_url'];
 
     public function user()
     {
@@ -57,6 +61,13 @@ class Profile extends Model
     {
         return Attribute::make(
             set: fn ($value) => ucfirst(strtolower($value))
+        );
+    }
+
+    protected function profilePictureUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->profile_picture ? asset('storage/' . $this->profile_picture) : null
         );
     }
 }

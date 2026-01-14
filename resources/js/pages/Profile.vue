@@ -41,6 +41,8 @@ const formDoctorPersonal = ref({
     email: "",
     clinic_phone_number: "",
     doctor_note: "",
+    profile_picture: null,
+    profile_picture_preview: null,
 });
 
 async function editPersonal() {
@@ -57,6 +59,8 @@ async function editPersonal() {
         room_number: doctor?.room_number,
         clinic_phone_number: doctor?.clinic_phone_number,
         doctor_note: doctor?.doctor_note,
+        profile_picture: null,
+        profile_picture_preview: profile?.profile_picture_url || null,
     };
     isEditingPersonal.value = true;
 }
@@ -67,16 +71,66 @@ async function cancelEditPersonal() {
 
 async function onUpdateDoctorPersonal() {
     try {
-        const response = await axios.put(
-            "/doctor/profile",
-            formDoctorPersonal.value
-        );
+        const payload = formDoctorPersonal.value;
+        const fd = new FormData();
+
+        [
+            'first_name',
+            'middle_name',
+            'last_name',
+            'email',
+            'doctor_specialty_id',
+            'license_number',
+            'room_number',
+            'clinic_phone_number',
+            'doctor_note',
+        ].forEach((key) => {
+            if (payload[key] !== undefined && payload[key] !== null) {
+                fd.append(key, payload[key]);
+            }
+        });
+
+        if (payload.profile_picture instanceof File) {
+            fd.append('profile_picture', payload.profile_picture);
+        }
+
+        // spoof method so Laravel accepts it as PUT
+        fd.append('_method', 'PUT');
+
+        await axios.post('/doctor/profile', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
         await auth.fetchUser();
-        toast.success("Profile updated successfully.");
+        toast.success('Profile updated successfully.');
         isEditingPersonal.value = false;
+
+        // revoke preview URL if any
+        if (payload.profile_picture_preview && payload.profile_picture instanceof File) {
+            URL.revokeObjectURL(payload.profile_picture_preview);
+        }
     } catch (err) {
         console.error(err);
+        const serverMsg = err.response?.data?.message || err.response?.data?.error || null;
+
+        if (err.response?.status === 422) {
+            const first = Object.values(err.response.data.errors || {})[0]?.[0];
+            toast.error(first || 'Validation failed.');
+        } else {
+            toast.error(serverMsg || 'Failed to update profile.');
+        }
     }
+}
+
+function onFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    // cleanup previous preview
+    if (formDoctorPersonal.value.profile_picture_preview && formDoctorPersonal.value.profile_picture instanceof File) {
+        URL.revokeObjectURL(formDoctorPersonal.value.profile_picture_preview);
+    }
+    formDoctorPersonal.value.profile_picture = file;
+    formDoctorPersonal.value.profile_picture_preview = URL.createObjectURL(file);
 }
 
 const mySchedule = ref([]);
@@ -418,10 +472,13 @@ async function onSubmitSchedule() {
                     >
                         <div class="w-full h-full sm:size-54">
                             <img
-                                src="https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png"
+                                :src="isEditingPersonal ? (formDoctorPersonal.profile_picture_preview || user.profile_picture_url || 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png') : (user.profile_picture_url || 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png')"
                                 alt="Profile Picture"
                                 class="w-full h-full border rounded-md border-color object-cover"
                             />
+                            <div v-if="isEditingPersonal" class="mt-2">
+                                <input type="file" accept="image/*" @change="onFileChange" />
+                            </div>
                         </div>
                         <div class="flex flex-col md:flex-grow gap-4">
                             <div class="flex flex-col md:flex-row gap-4">

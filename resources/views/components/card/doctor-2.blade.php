@@ -5,8 +5,11 @@
 @if(isset($doctor))
 <div class="flex flex-row shadow-md border border-color rounded-md gap-4 overflow-hidden mb-4 max-w-140">
     <div class="w-32 flex-shrink-0 min-h-60">
-        <img src="{{ $doctor->profile->avatar ?? 'https://img.freepik.com/free-photo/beautiful-young-female-doctor-looking-camera-office_1301-7807.jpg?semt=ais_hybrid&w=740&q=80' }}"
-            alt="{{ $doctor->profile->first_name ?? 'Doctor' }}" class="w-full h-full object-cover" />
+        <img 
+            src="{{ asset('storage/' . optional($doctor->profile)->profile_picture ?? 'default-doctor.jpg') }}" 
+            alt="{{ optional($doctor->profile)->first_name ?? 'Doctor' }}" 
+            class="w-full h-full object-cover" 
+        />
     </div>
     <div class="flex flex-col min-w-64 justify-between w-full p-4">
         <div class="flex flex-col gap-2">
@@ -14,7 +17,6 @@
             <p>{{ $doctor->specialty->name ?? '-' }}</p>
             <div>
                 @php
-                    // Capitalize day names for display and collect HMOs
                     $days = $doctor->availabilities->pluck('day_of_week')->unique()->values()->map(function($d){ return ucfirst($d); });
                     $hmos = $doctor->hmos->pluck('name')->unique()->values();
                     $timeRange = '';

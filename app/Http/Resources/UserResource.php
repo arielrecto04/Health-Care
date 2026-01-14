@@ -29,6 +29,7 @@ class UserResource extends JsonResource
             $data['gender'] = $this->profile->gender;
             $data['phone'] = $this->profile->phone;
             $data['contact_email'] = $this->profile->contact_email;
+            $data['profile_picture_url'] = $this->profile->profile_picture_url;
 
 
             if ($this->profile->relationLoaded('doctor') && $this->profile->doctor) {

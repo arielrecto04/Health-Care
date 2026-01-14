@@ -9,6 +9,7 @@ use App\Http\Resources\DoctorResource;
 use App\Models\DoctorSpecialty;
 use App\Models\Hmo;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class DoctorController extends Controller
 {
@@ -23,36 +24,69 @@ class DoctorController extends Controller
     {
         $user = Auth::user();
 
-        $validated = $request->validate([
-            'email' => 'required|email|max:255',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'doctor_specialty_id' => 'nullable|integer|exists:doctor_specialties,id',
-            'license_number' => 'nullable|string|max:50',
-            'room_number' => 'nullable|string|max:50',
-            'clinic_phone_number' => 'nullable|string|max:50',
-            'doctor_note' => 'nullable|string',
-        ]);
+        try {
+            $validated = $request->validate([
+                'email' => 'required|email|max:255',
+                'first_name' => 'required|string|max:255',
+                'middle_name' => 'required|string|max:255',
+                'last_name' => 'required|string|max:255',
+                'doctor_specialty_id' => 'nullable|integer|exists:doctor_specialties,id',
+                'license_number' => 'nullable|string|max:50',
+                'room_number' => 'nullable|string|max:50',
+                'clinic_phone_number' => 'nullable|string|max:50',
+                'doctor_note' => 'nullable|string',
+                'profile_picture' => 'nullable|image|max:2048',
+            ]);
 
-        $user->update([
-            'email' => $validated['email'],
-        ]);
-        
-        $user->profile->update([
-            'first_name' => $validated['first_name'],
-            'middle_name' => $validated['middle_name'],
-            'last_name' => $validated['last_name'],
-            'contact_email' => $validated['email'],
-        ]);
+            $user->update([
+                'email' => $validated['email'],
+            ]);
+            
+            $profileData = [
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'],
+                'last_name' => $validated['last_name'],
+                'contact_email' => $validated['email'],
+            ];
 
-        $user->profile->doctor->update([
-            'doctor_specialty_id' => $validated['doctor_specialty_id'],
-            'license_number' => $validated['license_number'],
-            'room_number' => $validated['room_number'],
-            'clinic_phone_number' => $validated['clinic_phone_number'],
-            'doctor_note' => $validated['doctor_note'],
-        ]);
+            if ($request->hasFile('profile_picture')) {
+                // delete old file if exists
+                if ($user->profile->profile_picture) {
+                    Storage::disk('public')->delete($user->profile->profile_picture);
+                }
+
+                $path = $request->file('profile_picture')->store('profiles', 'public');
+                $profileData['profile_picture'] = $path;
+            }
+
+            $user->profile->update($profileData);
+
+            $user->profile->doctor->update([
+                'doctor_specialty_id' => $validated['doctor_specialty_id'] ?? null,
+                'license_number' => $validated['license_number'] ?? null,
+                'room_number' => $validated['room_number'] ?? null,
+                'clinic_phone_number' => $validated['clinic_phone_number'] ?? null,
+                'doctor_note' => $validated['doctor_note'] ?? null,
+            ]);
+
+            return response()->json([
+                'message' => 'Profile updated successfully.',
+                'user' => $user->load('profile.doctor.specialty'),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Doctor profile update error', ['message' => $e->getMessage(), 'exception' => (string) $e]);
+
+            $message = $e->getMessage();
+            // If validation exception, let Laravel return the validation errors automatically
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                throw $e;
+            }
+
+            return response()->json([
+                'message' => 'Failed to update profile.',
+                'error' => $message,
+            ], 500);
+        }
 
         return response()->json([
             'message' => 'Profile updated successfully.',
