@@ -29,6 +29,9 @@ Route::get('/doctor', function () {
 Route::get('/doctor/specialties', [DoctorController::class, 'getSpecialties']);
 Route::get('/doctor/hmos', [DoctorController::class, 'getHmos']);
 Route::post('/doctor/search', [DoctorController::class, 'search']);
+Route::get('/doctors/specialties', [DoctorController::class, 'getSpecialties']);
+Route::get('/doctors/hmos', [DoctorController::class, 'getHmos']);
+Route::post('/doctors/search-json', [DoctorController::class, 'searchJson']); 
 
 
 Route::get('/contact', function () {

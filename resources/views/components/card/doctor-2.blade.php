@@ -36,8 +36,22 @@
             </div>
         </div>
         <div>
-            <a href="/appointments?doctor_id={{ $doctor->id }}" data-vue="Button" data-label="Book Appointment" class="btn btn-primary" onclick="window.location.href='/appointments?doctor_id={{ $doctor->id }}'">Book Appointment</a> <br>
-            <a href="/doctor/{{ $doctor->id }}" data-vue="Button" data-label="View More Details" data-variant="link" class="btn btn-link" onclick="window.location.href='/doctor/{{ $doctor->id }}'">View More Details</a>
+            <a
+                href="/appointments?doctor_id={{ $doctor->id }}"
+                class="p-button p-component w-full flex items-center justify-center gap-2 mt-5"
+            >
+                <i class="pi pi-calendar"></i>
+                <span>Book Appointment</span>
+            </a>
+
+            <br>
+
+            <a
+                href="/doctors/{{ $doctor->id }}"
+                class="p-button p-button-link p-component w-full"
+            >
+                View More Details
+            </a>
         </div>
     </div>
 </div>

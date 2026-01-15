@@ -17,6 +17,15 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    profile_picture: { 
+        type: String, 
+        required: false, 
+        default: '' 
+    },
+    hmos: {
+        type: Array,
+        default: () => []
+    },
 });
 
 const doctorStore = useDoctorStore();
@@ -31,17 +40,18 @@ const groupedAvailability = computed(
 
 <template>
     <div
-        class="flex flex-col border border-color shadow-md rounded-md gap-6 p-4"
+        class="flex flex-col border border-color shadow-md rounded-md gap-6 p-4 max-w-sm"
+
     >
         <div class="flex flex-col sm:flex-row items-center gap-4">
             <div class="flex flex-col">
                 <div
-                    class="max-w-54 sm:size-34 border border-color rounded-md overflow-hidden"
+                    class="max-w-50 sm:size-34 border border-color rounded-md overflow-hidden"
                 >
-                    <img
-                        src="https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png"
-                        alt=""
-                        class="h-full w-full object-cover"
+                    <img 
+                    :src="profile_picture || 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png'" 
+                    alt="Doctor Picture" 
+                    class="h-full w-full object-cover" 
                     />
                 </div>
             </div>
@@ -51,6 +61,10 @@ const groupedAvailability = computed(
                 <div class="flex flex-col gap-1">
                     <h6>{{ name }}</h6>
                     <p>{{ specialty }}</p>
+                    <p v-if="hmos.length" class="text-sm text-muted">
+                        HMOs: {{ hmos.join(', ') }}
+                    </p>
+
                 </div>
                 <Button
                     class="justify-start!"
@@ -65,7 +79,7 @@ const groupedAvailability = computed(
             <div v-if="groupedAvailability.length" class="flex flex-col gap-2">
                 <div v-for="(group, index) in groupedAvailability" :key="index">
                     <p>{{ group.days.join(", ") }}</p>
-                    <p>{{ group.start_time }} - {{ group.end_time }}</p>
+                    <p>{{ group.start_time.toUpperCase() }} - {{ group.end_time.toUpperCase() }}</p>
                 </div>
             </div>
             <div v-else>

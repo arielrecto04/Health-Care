@@ -208,4 +208,72 @@ class DoctorController extends Controller
         }
     }
 
+    public function searchJson(Request $request)
+{
+    $name = trim((string) $request->input('name', ''));
+    $specialty = $request->input('specialty');
+    $hmo = $request->input('hmo');
+    $days = array_map('strtolower', (array) $request->input('days', []));
+    $time = $request->input('time');
+
+    $query = Doctor::with(['profile', 'specialty', 'availabilities', 'hmos']);
+
+    if ($name) {
+        $needle = strtolower($name);
+        $parts = preg_split('/\s+/', $needle, -1, PREG_SPLIT_NO_EMPTY);
+
+        $query->whereHas('profile', function ($q) use ($needle, $parts) {
+            if (count($parts) >= 2) {
+                $first = $parts[0];
+                $last = $parts[1];
+                $q->where(function($qq) use ($first, $last) {
+                    $qq->whereRaw('LOWER(first_name) LIKE ?', ["%{$first}%"])
+                       ->whereRaw('LOWER(last_name) LIKE ?', ["%{$last}%"]);
+                })->orWhere(function($qq) use ($first, $last) {
+                    $qq->whereRaw('LOWER(first_name) LIKE ?', ["%{$last}%"])
+                       ->whereRaw('LOWER(last_name) LIKE ?', ["%{$first}%"]);
+                });
+            }
+
+            $q->orWhereRaw('LOWER(first_name) LIKE ?', ["%{$needle}%"])
+              ->orWhereRaw('LOWER(last_name) LIKE ?', ["%{$needle}%"])
+              ->orWhereRaw("LOWER(first_name || ' ' || last_name) LIKE ?", ["%{$needle}%"]) 
+              ->orWhereRaw("LOWER(last_name || ' ' || first_name) LIKE ?", ["%{$needle}%"]);
+        });
+    }
+
+    if ($specialty) $query->where('doctor_specialty_id', $specialty);
+    if ($hmo) $query->whereHas('hmos', fn($q) => $q->where('hmos.id', $hmo));
+    if ($days) $query->whereHas('availabilities', fn($q) => $q->whereIn('day_of_week', $days));
+    if ($time) {
+        $query->whereHas('availabilities', function ($q) use ($time) {
+            if (strtoupper($time) === 'AM') {
+                $q->whereBetween('start_time', ['00:00:00','11:59:59']);
+            } else {
+                $q->whereBetween('start_time', ['12:00:00','23:59:59']);
+            }
+        });
+    }
+
+    $doctors = $query->get();
+
+    return response()->json([
+        'doctors' => $doctors->map(fn($d) => [
+            'id' => $d->id,
+            'name' => ($d->profile->first_name ?? '') . ' ' . ($d->profile->last_name ?? ''),
+            'specialty' => $d->specialty->name ?? null,
+            'profile_picture' => $d->profile->profile_picture 
+                    ? Storage::url($d->profile->profile_picture) 
+                    : null,
+            'hmos' => $d->hmos->pluck('name'),
+            'availabilities' => $d->availabilities->map(fn($a) => [
+                'day' => $a->day_of_week,
+                'start' => $a->start_time,
+                'end' => $a->end_time
+            ]),
+        ])
+    ]);
+}
+
+
 }
