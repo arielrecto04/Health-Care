@@ -19,3 +19,5 @@ Route::get('/doctors', [DoctorController::class, 'index']);
 Route::get('/doctor/specialties', [DoctorSpecialtyController::class, 'index']);
 Route::get('doctor/{id}/availabilities', [DoctorAvailabilityController::class, 'index']);
 Route::get('/staffs', [StaffController::class, 'index']);
+Route::get('/services', [ServiceController::class, 'apiIndex']);
+

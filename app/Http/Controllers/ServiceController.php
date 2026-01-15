@@ -15,4 +15,11 @@ class ServiceController extends Controller
         return view('services', compact('categories'));
 
     }
+
+    public function apiIndex()
+    {
+        $categories = ServiceCategory::with('services')->get();
+        return response()->json(['data' => $categories]);
+    }
+
 }

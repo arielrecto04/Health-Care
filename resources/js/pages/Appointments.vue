@@ -55,7 +55,7 @@ const addAppointmentModal = ref(false);
 
 const teleconsultation = ref(false);
 const selectedAppointmentType = ref(null);
-const selectedHmo = ref(0);
+const selectedHmo = ref({ label: "None", value: 0 });
 const hmoNumber = ref(null);
 const insuranceNumber = ref(null);
 const date = ref(null);
@@ -129,7 +129,7 @@ async function fetchHmos() {
 
         const hmos = response.data.data.map((hmo) => ({
             label: hmo.name,
-            value: hmo.id,
+            value: Number(hmo.id), // <-- force number
         }));
 
         hmoOptions.value = [{ label: "None", value: 0 }, ...hmos];
@@ -137,6 +137,7 @@ async function fetchHmos() {
         console.log(err);
     }
 }
+
 
 onMounted(fetchHmos);
 
@@ -390,12 +391,13 @@ async function onSubmit() {
                                 v-model="selectedHmo"
                                 :options="hmoOptions"
                                 optionLabel="label"
-                                optionValue="value"
                                 name="patient_hmo_id"
                                 fluid
+                                appendTo="body"
                             />
                             <label for="hmo">HMO</label>
                         </FloatLabel>
+
                     </FormField>
                     <FormField v-if="selectedHmo != 0">
                         <FloatLabel variant="on">
