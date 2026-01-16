@@ -94,7 +94,6 @@ async function onUpdateDoctorPersonal() {
             fd.append('profile_picture', payload.profile_picture);
         }
 
-        // spoof method so Laravel accepts it as PUT
         fd.append('_method', 'PUT');
 
         await axios.post('/doctor/profile', fd, {
@@ -105,7 +104,6 @@ async function onUpdateDoctorPersonal() {
         toast.success('Profile updated successfully.');
         isEditingPersonal.value = false;
 
-        // revoke preview URL if any
         if (payload.profile_picture_preview && payload.profile_picture instanceof File) {
             URL.revokeObjectURL(payload.profile_picture_preview);
         }
@@ -125,7 +123,6 @@ async function onUpdateDoctorPersonal() {
 function onFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
-    // cleanup previous preview
     if (formDoctorPersonal.value.profile_picture_preview && formDoctorPersonal.value.profile_picture instanceof File) {
         URL.revokeObjectURL(formDoctorPersonal.value.profile_picture_preview);
     }
@@ -217,13 +214,12 @@ function transformSchedule(raw) {
 
         grouped.push({
             selectedDays: days.map(d => ({ name: d.charAt(0).toUpperCase() + d.slice(1) })),
-            timeRanges: [...ranges], // do NOT add empty slot here
+            timeRanges: [...ranges],
         });
     }
 
     return grouped;
 }
-
 
 const editScheduleModal = ref(false);
 
@@ -261,7 +257,7 @@ function availableDays(currentSchedule) {
     const selectedDays = schedules.value
         .filter((s) => s !== currentSchedule)
         .flatMap((s) => s.selectedDays)
-        .map((d) => d.name); // flatten and get names
+        .map((d) => d.name);
 
     return days.value.filter((day) => !selectedDays.includes(day.name));
 }
@@ -270,7 +266,6 @@ function watchSchedule(schedule) {
     watch(
         () => schedule.timeRanges,
         (ranges) => {
-            // remove all fully empty rows except the last one
             for (let i = ranges.length - 2; i >= 0; i--) {
                 if (!ranges[i].start_time && !ranges[i].end_time) {
                     ranges.splice(i, 1);
@@ -278,7 +273,6 @@ function watchSchedule(schedule) {
             }
 
             const last = ranges[ranges.length - 1];
-            // always ensure there is at least one empty row at the end
             if (last.start_time || last.end_time) {
                 ranges.push({ start_time: "", end_time: "" });
             }
@@ -287,9 +281,7 @@ function watchSchedule(schedule) {
     );
 }
 
-// Apply watcher to all schedules
 schedules.value.forEach(s => watchSchedule(s));
-
 
 watch(
     schedules,
@@ -322,7 +314,6 @@ watch(
     { deep: true }
 );
 
-
 function canSelectDays(scheduleIndex) {
     for (let i = 0; i < scheduleIndex; i++) {
         const prev = schedules.value[i];
@@ -341,7 +332,7 @@ function canSelectDays(scheduleIndex) {
 function formatTo24Hr(timeStr) {
     if (!timeStr) return "";
     const [time, modifier] = timeStr.split(" ");
-    if (!modifier) return time; // already in 24hr (just in case)
+    if (!modifier) return time;
 
     let [hours, minutes] = time.split(":").map(Number);
     if (modifier.toLowerCase() === "pm" && hours < 12) hours += 12;
@@ -356,15 +347,12 @@ function isOverlappingWithAll(range, day, schedules) {
     if (!range.start_time || !range.end_time) return false;
     const dayName = day.toLowerCase();
 
-    // collect all ranges for this day (saved + current)
     const allRanges = [];
 
-    // include existing ranges from server
     if (existingRangesMap.value[dayName]) {
         allRanges.push(...existingRangesMap.value[dayName]);
     }
 
-    // include current ranges in form
     schedules.forEach(schedule => {
         if (!schedule.selectedDays.some(d => d.name.toLowerCase() === dayName)) return;
         schedule.timeRanges.forEach(r => {
@@ -475,7 +463,6 @@ async function onClearSchedule() {
             clear: true,
         });
 
-        // reset UI state
         schedules.value = [
             {
                 selectedDays: [],
@@ -490,7 +477,6 @@ async function onClearSchedule() {
         toast.error("Failed to clear schedule.");
     }
 }
-
 
 </script>
 
@@ -866,7 +852,6 @@ async function onClearSchedule() {
                 </div>
             </Section>
         </div>
-
         <Dialog
             v-model:visible="editScheduleModal"
             modal

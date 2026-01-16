@@ -33,9 +33,18 @@ const { availabilities } = storeToRefs(doctorStore);
 const { fetchAvailability } = doctorStore;
 
 onMounted(() => fetchAvailability(props.id));
-const groupedAvailability = computed(
-    () => availabilities.value[props.id] || []
-);
+
+const availabilityByDay = computed(() => {
+  const grouped = {};
+  (availabilities.value[props.id] || []).forEach((slot) => {
+    slot.days.forEach((day) => {
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push({ start: slot.start_time, end: slot.end_time });
+    });
+  });
+  return grouped;
+});
+
 </script>
 
 <template>
@@ -76,10 +85,12 @@ const groupedAvailability = computed(
             </div>
         </div>
         <div class="flex flex-col p-4 justify-between h-full gap-6">
-            <div v-if="groupedAvailability.length" class="flex flex-col gap-2">
-                <div v-for="(group, index) in groupedAvailability" :key="index">
-                    <p>{{ group.days.join(", ") }}</p>
-                    <p>{{ group.start_time.toUpperCase() }} - {{ group.end_time.toUpperCase() }}</p>
+            <div v-if="Object.keys(availabilityByDay).length" class="flex flex-col gap-2">
+                <div v-for="(slots, day) in availabilityByDay" :key="day" class="flex flex-col gap-1">
+                <p class="font-semibold">{{ day }}</p>
+                <p v-for="(slot, index) in slots" :key="index">
+                    {{ slot.start.toUpperCase() }} - {{ slot.end.toUpperCase() }}
+                </p>
                 </div>
             </div>
             <div v-else>
