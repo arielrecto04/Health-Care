@@ -148,7 +148,12 @@ async function fetchSchedule() {
         if (mySchedule.value.length > 0) {
             schedules.value = transformSchedule(mySchedule.value);
         } else {
-            schedules.value = [{ selectedDays: [], timeSlots: [""] }];
+            schedules.value = [
+            {
+                selectedDays: [],
+                timeRanges: [{ start_time: "", end_time: "" }],
+            },
+            ];
         }
 
         schedules.value.forEach((s) => watchSchedule(s));
@@ -172,63 +177,63 @@ function getAvailability(day) {
 }
 
 function transformSchedule(raw) {
-    // Step 1: Build a map of day -> timeSlots
-    const daySlotsMap = {};
+    const map = {};
 
     raw.forEach((item) => {
         const day = item.day_of_week;
-        if (!daySlotsMap[day]) daySlotsMap[day] = [];
-        if (!daySlotsMap[day].includes(item.start_time)) {
-            daySlotsMap[day].push(item.start_time);
-        }
+
+        if (!map[day]) map[day] = [];
+        map[day].push({
+            start_time: formatTo24Hr(item.start_time),
+            end_time: formatTo24Hr(item.end_time),
+        });
     });
 
-    // Step 2: Convert map to array of { day, slots } and sort slots
-    const daysWithSlots = Object.entries(daySlotsMap).map(([day, slots]) => ({
-        day,
-        slots: slots.sort((a, b) => timeToMinutes(a) - timeToMinutes(b)),
-    }));
-
-    // Step 3: Group days with identical slots
     const grouped = [];
     const used = new Set();
+    const entries = Object.entries(map);
 
-    for (let i = 0; i < daysWithSlots.length; i++) {
+    for (let i = 0; i < entries.length; i++) {
         if (used.has(i)) continue;
 
-        const current = daysWithSlots[i];
-        const groupDays = [current.day];
+        const [day, ranges] = entries[i];
+        const days = [day];
 
-        for (let j = i + 1; j < daysWithSlots.length; j++) {
+        for (let j = i + 1; j < entries.length; j++) {
             if (used.has(j)) continue;
+            const [, compareRanges] = entries[j];
 
-            const compare = daysWithSlots[j];
             if (
-                current.slots.length === compare.slots.length &&
-                current.slots.every((slot, idx) => slot === compare.slots[idx])
+                ranges.length === compareRanges.length &&
+                ranges.every((r, idx) =>
+                    r.start_time === compareRanges[idx].start_time &&
+                    r.end_time === compareRanges[idx].end_time
+                )
             ) {
-                groupDays.push(compare.day);
+                days.push(entries[j][0]);
                 used.add(j);
             }
         }
 
         grouped.push({
-            selectedDays: groupDays.map((d) => ({
-                name: d.charAt(0).toUpperCase() + d.slice(1),
-            })),
-            timeSlots: [...current.slots, ""], // extra empty slot for adding new time
+            selectedDays: days.map(d => ({ name: d.charAt(0).toUpperCase() + d.slice(1) })),
+            timeRanges: [...ranges], // do NOT add empty slot here
         });
     }
+
     return grouped;
 }
+
 
 const editScheduleModal = ref(false);
 
 const schedules = ref([
-    {
-        selectedDays: [],
-        timeSlots: [""],
-    },
+  {
+    selectedDays: [],
+    timeRanges: [
+      { start_time: "", end_time: "" }
+    ],
+  },
 ]);
 
 const days = ref([
@@ -242,82 +247,15 @@ const days = ref([
 ]);
 
 const slots = [
-    "6:00 am",
-    "6:30 am",
-    "7:00 am",
-    "7:30 am",
-    "8:00 am",
-    "8:30 am",
-    "9:00 am",
-    "9:30 am",
-    "10:00 am",
-    "10:30 am",
-    "11:00 am",
-    "11:30 am",
-    "12:00 pm",
-    "12:30 pm",
-    "1:00 pm",
-    "1:30 pm",
-    "2:00 pm",
-    "2:30 pm",
-    "3:00 pm",
-    "3:30 pm",
-    "4:00 pm",
-    "4:30 pm",
-    "5:00 pm",
-    "5:30 pm",
-    "6:00 pm",
-    "6:30 pm",
-    "7:00 pm",
-    "7:30 pm",
-    "8:00 pm",
-    "8:30 pm",
-    "9:00 pm",
-    "9:30 pm",
-    "10:00 pm",
-    "10:30 pm",
-    "11:00 pm",
-    "11:30 pm",
-    "12:00 am",
-    "12:30 am",
-    "1:00 am",
-    "1:30 am",
-    "2:00 am",
-    "2:30 am",
-    "3:00 am",
-    "3:30 am",
-    "4:00 am",
-    "4:30 am",
-    "5:00 am",
-    "5:30 am",
+  "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
+  "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
+  "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30",
+  "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
+  "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00", "05:30"
 ];
 
 const filteredSlots = ref([]);
-
-function searchSlots(event, currentSchedule, slotIndex) {
-    const query = event.query.toLowerCase();
-
-    const selectedSlots = schedules.value.flatMap((s, idx) =>
-        s.timeSlots.filter(
-            (slot, sidx) =>
-                slot && (s !== currentSchedule || sidx !== slotIndex)
-        )
-    );
-
-    filteredSlots.value = slots.filter(
-        (s) => s.toLowerCase().includes(query) && !selectedSlots.includes(s)
-    );
-}
-
-function timeToMinutes(timeStr) {
-    const [time, modifier] = timeStr.split(" "); // "6:30", "AM"
-    let [hours, minutes] = time.split(":").map(Number);
-
-    if (modifier === "PM" && hours !== 12) hours += 12;
-    if (modifier === "AM" && hours === 12) hours = 0;
-
-    return hours * 60 + minutes;
-}
 
 function availableDays(currentSchedule) {
     const selectedDays = schedules.value
@@ -328,69 +266,71 @@ function availableDays(currentSchedule) {
     return days.value.filter((day) => !selectedDays.includes(day.name));
 }
 
-function sortSlots(schedule) {
-    const nonEmptySlots = schedule.timeSlots.filter((slot) => slot);
-    nonEmptySlots.sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
-    schedule.timeSlots = [...nonEmptySlots, ""];
-}
-
 function watchSchedule(schedule) {
     watch(
-        () => schedule.timeSlots,
-        (newVal) => {
-            if (schedule.selectedDays.length === 0) return;
+        () => schedule.timeRanges,
+        (ranges) => {
+            // remove all fully empty rows except the last one
+            for (let i = ranges.length - 2; i >= 0; i--) {
+                if (!ranges[i].start_time && !ranges[i].end_time) {
+                    ranges.splice(i, 1);
+                }
+            }
 
-            const nonEmpty = schedule.timeSlots.filter((slot) => slot?.trim());
-            if (schedule.timeSlots.length !== nonEmpty.length + 1) {
-                schedule.timeSlots = [...nonEmpty, ""];
+            const last = ranges[ranges.length - 1];
+            // always ensure there is at least one empty row at the end
+            if (last.start_time || last.end_time) {
+                ranges.push({ start_time: "", end_time: "" });
             }
         },
-        { deep: true }
-    );
-
-    watch(
-        () => schedule.selectedDays,
-        (newVal) => {
-            if (newVal.length === 0) schedule.timeSlots = [];
-            else if (schedule.timeSlots.length === 0) schedule.timeSlots = [""];
-        },
-        { deep: true }
+        { deep: true, immediate: true }
     );
 }
 
-schedules.value.forEach((s) => watchSchedule(s));
+// Apply watcher to all schedules
+schedules.value.forEach(s => watchSchedule(s));
+
 
 watch(
     schedules,
     (newVal) => {
         for (let i = newVal.length - 2; i >= 0; i--) {
             const schedule = newVal[i];
-            if (
-                schedule.selectedDays.length === 0 &&
-                schedule.timeSlots.every((slot) => !slot)
-            ) {
+
+            const hasRanges = schedule.timeRanges?.some(
+                r => r.start_time || r.end_time
+            );
+
+            if (schedule.selectedDays.length === 0 && !hasRanges) {
                 newVal.splice(i, 1);
             }
         }
 
-        const lastSchedule = newVal[newVal.length - 1];
-        if (
-            lastSchedule.selectedDays.length > 0 ||
-            lastSchedule.timeSlots.some((slot) => slot)
-        ) {
-            newVal.push({ selectedDays: [], timeSlots: [""] });
+        const last = newVal[newVal.length - 1];
+        const lastHasRanges = last.timeRanges?.some(
+            r => r.start_time || r.end_time
+        );
+
+        if (last.selectedDays.length > 0 || lastHasRanges) {
+            newVal.push({
+                selectedDays: [],
+                timeRanges: [{ start_time: "", end_time: "" }],
+            });
             watchSchedule(newVal[newVal.length - 1]);
         }
     },
     { deep: true }
 );
 
+
 function canSelectDays(scheduleIndex) {
     for (let i = 0; i < scheduleIndex; i++) {
         const prev = schedules.value[i];
         if (
             prev.selectedDays.length > 0 &&
-            prev.timeSlots.every((slot) => !slot)
+            prev.timeRanges.every(
+                r => !r.start_time && !r.end_time
+            )
         ) {
             return false;
         }
@@ -398,28 +338,160 @@ function canSelectDays(scheduleIndex) {
     return true;
 }
 
+function formatTo24Hr(timeStr) {
+    if (!timeStr) return "";
+    const [time, modifier] = timeStr.split(" ");
+    if (!modifier) return time; // already in 24hr (just in case)
+
+    let [hours, minutes] = time.split(":").map(Number);
+    if (modifier.toLowerCase() === "pm" && hours < 12) hours += 12;
+    if (modifier.toLowerCase() === "am" && hours === 12) hours = 0;
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}`;
+}
+
+function isOverlappingWithAll(range, day, schedules) {
+    if (!range.start_time || !range.end_time) return false;
+    const dayName = day.toLowerCase();
+
+    // collect all ranges for this day (saved + current)
+    const allRanges = [];
+
+    // include existing ranges from server
+    if (existingRangesMap.value[dayName]) {
+        allRanges.push(...existingRangesMap.value[dayName]);
+    }
+
+    // include current ranges in form
+    schedules.forEach(schedule => {
+        if (!schedule.selectedDays.some(d => d.name.toLowerCase() === dayName)) return;
+        schedule.timeRanges.forEach(r => {
+            if (r !== range && r.start_time && r.end_time) {
+                allRanges.push({ start_time: r.start_time, end_time: r.end_time });
+            }
+        });
+    });
+
+    return allRanges.some(r => range.start_time < r.end_time && range.end_time > r.start_time);
+}
+
+
+function hasDuplicateRanges(schedules) {
+    for (const s of schedules) {
+        const seen = new Set();
+        for (const r of s.timeRanges) {
+            if (!r.start_time || !r.end_time) continue;
+            const key = `${r.start_time}-${r.end_time}`;
+            if (seen.has(key)) return true;
+            seen.add(key);
+        }
+    }
+    return false;
+}
+
 async function onSubmitSchedule() {
-    const payload = schedules.value
-        .map((schedule) => ({
-            selectedDays: schedule.selectedDays.map((d) => d.name),
-            timeSlots: schedule.timeSlots.filter((slot) => slot?.trim()),
-        }))
-        .filter((schedule) => schedule.timeSlots.length > 0);
+
+    if (hasDuplicateRanges(schedules.value)) {
+        toast.error("You have duplicate time ranges in the same schedule.");
+        return;
+    }
+    const cleanedSchedules = schedules.value
+        .filter(
+            s =>
+                s.selectedDays.length &&
+                s.timeRanges.some(r => r.start_time && r.end_time)
+        )
+        .map(s => ({
+            selectedDays: s.selectedDays.map(d => ({ name: d.name })),
+            timeRanges: s.timeRanges
+                .filter(r => r.start_time && r.end_time)
+                .map(r => ({
+                    start_time: formatTo24Hr(r.start_time),
+                    end_time: formatTo24Hr(r.end_time),
+                })),
+        }));
 
     try {
-        const response = await axios.post("/doctor/schedule", {
-            schedules: payload,
-        });
-
+        await axios.post("/doctor/schedule", { schedules: cleanedSchedules });
         await fetchSchedule();
-
         editScheduleModal.value = false;
-
         toast.success("Schedule updated successfully.");
-    } catch (error) {
-        toast.error("Failed to update schedule.");
+    } catch (err) {
+        console.error(err.response?.data || err);
+        const firstError =
+            Object.values(err.response?.data?.errors || {})[0]?.[0];
+        toast.error(firstError || "Failed to update schedule.");
     }
 }
+
+const existingRangesMap = computed(() => {
+    const map = {};
+    mySchedule.value.forEach(({ day_of_week, start_time, end_time }) => {
+        const day = day_of_week.toLowerCase();
+        if (!map[day]) map[day] = [];
+        map[day].push({
+            start_time: formatTo24Hr(start_time),
+            end_time: formatTo24Hr(end_time),
+        });
+    });
+    return map;
+});
+
+function getStartTimeOptions(range, day) {
+    if (!day) return slots.map(s => ({ label: s, value: s }));
+
+    return slots
+        .filter(s => {
+            if (s === range.start_time) return true;
+
+            const end = range.end_time || slots[slots.indexOf(s) + 1];
+            const tempRange = { start_time: s, end_time: end };
+            return !isOverlappingWithAll(tempRange, day, schedules.value);
+        })
+        .map(s => ({ label: s, value: s }));
+}
+
+function getEndTimeOptions(range, day) {
+    if (!range.start_time || !day) return slots.map(s => ({ label: s, value: s }));
+
+    return slots
+        .filter(s => {
+            if (s === range.end_time) return true;
+
+            const tempRange = { start_time: range.start_time, end_time: s };
+            return s > range.start_time && !isOverlappingWithAll(tempRange, day, schedules.value);
+        })
+        .map(s => ({ label: s, value: s }));
+}
+
+async function onClearSchedule() {
+    if (!confirm("This will remove all your schedules. Continue?")) return;
+
+    try {
+        await axios.post("/doctor/schedule", {
+            schedules: [],
+            clear: true,
+        });
+
+        // reset UI state
+        schedules.value = [
+            {
+                selectedDays: [],
+                timeRanges: [{ start_time: "", end_time: "" }],
+            },
+        ];
+
+        await fetchSchedule();
+        editScheduleModal.value = false;
+        toast.success("Schedule cleared successfully.");
+    } catch (err) {
+        toast.error("Failed to clear schedule.");
+    }
+}
+
+
 </script>
 
 <style>
@@ -470,7 +542,7 @@ async function onSubmitSchedule() {
                     <div
                         class="flex flex-col md:flex-row gap-4 md:items-start"
                     >
-                        <div class="aspect-square w-full max-w-54 md:mt-6">
+                        <div class="aspect-square w-full max-w-54 md:mt-2">
                             <img
                                 :src="isEditingPersonal ? (formDoctorPersonal.profile_picture_preview || user.profile_picture_url || 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png') : (user.profile_picture_url || 'https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_1280.png')"
                                 alt="Profile Picture"
@@ -682,7 +754,7 @@ async function onSubmitSchedule() {
                                 v-if="getAvailability('monday').length > 0"
                             >
                                 <p v-for="slot in getAvailability('monday')">
-                                    {{ slot.start_time }}
+                                    {{ slot.start_time }} – {{ slot.end_time }}
                                 </p>
                             </template>
                             <p
@@ -698,7 +770,7 @@ async function onSubmitSchedule() {
                                 v-if="getAvailability('tuesday').length > 0"
                             >
                                 <p v-for="slot in getAvailability('tuesday')">
-                                    {{ slot.start_time }}
+                                    {{ slot.start_time }} – {{ slot.end_time }}
                                 </p>
                             </template>
                             <p
@@ -716,7 +788,7 @@ async function onSubmitSchedule() {
                                 v-if="getAvailability('wednesday').length > 0"
                             >
                                 <p v-for="slot in getAvailability('wednesday')">
-                                    {{ slot.start_time }}
+                                    {{ slot.start_time }} – {{ slot.end_time }}
                                 </p>
                             </template>
                             <p
@@ -732,7 +804,7 @@ async function onSubmitSchedule() {
                                 v-if="getAvailability('thursday').length > 0"
                             >
                                 <p v-for="slot in getAvailability('thursday')">
-                                    {{ slot.start_time }}
+                                    {{ slot.start_time }} – {{ slot.end_time }}
                                 </p>
                             </template>
                             <p
@@ -750,7 +822,7 @@ async function onSubmitSchedule() {
                                 v-if="getAvailability('friday').length > 0"
                             >
                                 <p v-for="slot in getAvailability('friday')">
-                                    {{ slot.start_time }}
+                                    {{ slot.start_time }} – {{ slot.end_time }}
                                 </p>
                             </template>
                             <p
@@ -766,7 +838,7 @@ async function onSubmitSchedule() {
                                 v-if="getAvailability('saturday').length > 0"
                             >
                                 <p v-for="slot in getAvailability('saturday')">
-                                    {{ slot.start_time }}
+                                    {{ slot.start_time }} – {{ slot.end_time }}
                                 </p>
                             </template>
                             <p
@@ -781,7 +853,7 @@ async function onSubmitSchedule() {
                         <h6>Sunday</h6>
                         <template v-if="getAvailability('sunday').length > 0">
                             <p v-for="slot in getAvailability('sunday')">
-                                {{ slot.start_time }}
+                                {{ slot.start_time }} – {{ slot.end_time }}
                             </p>
                         </template>
                         <p
@@ -848,29 +920,37 @@ async function onSubmitSchedule() {
                             v-if="schedule.selectedDays.length > 0"
                             class="flex flex-col gap-2"
                         >
-                            <div
-                                v-for="(slot, sidx) in schedule.timeSlots"
-                                :key="sidx"
-                            >
+                            <div v-for="(range, rIdx) in schedule.timeRanges" :key="rIdx" class="flex gap-2 justify-center items-center">
                                 <FormField>
-                                    <AutoComplete
-                                        v-model="schedule.timeSlots[sidx]"
-                                        dropdown
-                                        fluid
-                                        :suggestions="filteredSlots"
-                                        @complete="
-                                            (e) =>
-                                                searchSlots(e, schedule, sidx)
-                                        "
-                                        @blur="sortSlots(schedule)"
-                                        placeholder="Select Time Slot"
+                                    <!-- Start Time -->
+                                    <Select
+                                        v-model="range.start_time"
+                                        :options="getStartTimeOptions(range, schedule.selectedDays[0]?.name)"
+                                        placeholder="Start time"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        class="w-45"
                                     />
-                                    <Message
-                                        severity="error"
-                                        size="small"
-                                        variant="simple"
-                                    >
-                                    </Message>
+                                </FormField>
+                                <FormField>
+                                    <!-- End Time -->
+                                    <Select
+                                        v-model="range.end_time"
+                                        :options="getEndTimeOptions(range, schedule.selectedDays[0]?.name)"
+                                        placeholder="End time"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        class="w-45"
+                                    />
+
+                                    <!-- Remove Range Button -->
+                                    <Button
+                                        icon="pi pi-trash"
+                                        severity="danger"
+                                        text
+                                        v-if="schedule.timeRanges.length > 1"
+                                        @click="schedule.timeRanges.splice(rIdx, 1)"
+                                    />
                                 </FormField>
                             </div>
                         </div>
@@ -879,6 +959,13 @@ async function onSubmitSchedule() {
             </Form>
             <template #footer>
                 <div class="flex justify-end gap-2">
+                    <Button
+                        type="button"
+                        label="Clear Schedule"
+                        severity="danger"
+                        outlined
+                        @click="onClearSchedule"
+                    />
                     <Button
                         type="button"
                         label="Cancel"

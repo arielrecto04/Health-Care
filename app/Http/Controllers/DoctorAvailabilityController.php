@@ -13,4 +13,5 @@ class DoctorAvailabilityController extends Controller
         $availabilities = DoctorAvailability::where('doctor_id', $id)->get();
         return DoctorAvailabilityResource::collection($availabilities);
     }
+    
 }

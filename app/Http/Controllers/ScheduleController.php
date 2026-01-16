@@ -35,53 +35,57 @@ class ScheduleController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'schedules' => 'required|array',
-            'schedules.*.selectedDays' => 'required|array|min:1',
-            'schedules.*.timeSlots' => 'required|array|min:1',
-        ]);
+{
+    if ($request->boolean('clear')) {
+    $doctor = Auth::user()->profile->doctor;
 
-        $user = Auth::user();
-        $doctor = $user->profile->doctor;
+    if (!$doctor) {
+        return response()->json(['message' => 'Doctor profile not found'], 404);
+    }
 
-        if (!$doctor) {
-            return response()->json(['message' => 'Doctor profile not found.'], 404);
-        }
+    $doctor->availabilities()->delete();
 
-        $doctor->availabilities()->exists() && $doctor->availabilities()->delete();
+    return response()->json([
+        'message' => 'Schedule cleared successfully',
+    ]);
+}
 
-        $weekDaysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    $request->validate([
+    'schedules' => 'required|array|min:1',
+    'schedules.*.selectedDays' => 'required|array|min:1',
+    'schedules.*.selectedDays.*.name' => 'required|string',
+    'schedules.*.timeRanges' => 'required|array|min:1',
+    'schedules.*.timeRanges.*.start_time' => 'required|date_format:H:i',
+    'schedules.*.timeRanges.*.end_time' => 'required|date_format:H:i|after:schedules.*.timeRanges.*.start_time',
+]);
 
-        foreach ($weekDaysOrder as $day) { // loop days in order
-            foreach ($request->schedules as $scheduleData) {
-                if (!in_array($day, array_map('strtolower', $scheduleData['selectedDays']))) {
-                    continue; // skip if day not selected
-                }
 
-                // Remove empty and duplicate time slots, parse with Carbon, sort
-                $timeSlots = collect($scheduleData['timeSlots'])
-                    ->filter(fn ($t) => trim($t) !== '')
-                    ->map(fn ($t) => Carbon::parse($t)->format('H:i')) // normalize to 24-hr
-                    ->unique()
-                    ->map(fn ($t) => Carbon::createFromFormat('H:i', $t))
-                    ->sort()
-                    ->values();
+    $doctor = Auth::user()->profile->doctor;
 
-                // Create availability records
-                foreach ($timeSlots as $i => $start) {
-                    $end = $timeSlots[$i + 1] ?? $start->copy()->addHours(1)->addMinutes(30);
+    if (!$doctor) {
+        return response()->json(['message' => 'Doctor profile not found'], 404);
+    }
 
-                    DoctorAvailability::create([
-                        'doctor_id'   => $doctor->id,
-                        'day_of_week' => $day,
-                        'start_time'  => $start->format('H:i:s'),
-                        'end_time'    => $end->format('H:i:s'),
-                    ]);
-                }
+    // Clear old schedule
+    $doctor->availabilities()->delete();
+
+    foreach ($request->schedules as $schedule) {
+        foreach ($schedule['selectedDays'] as $dayObj) {
+            $day = strtolower($dayObj['name']);
+
+            foreach ($schedule['timeRanges'] as $range) {
+
+                DoctorAvailability::create([
+                    'doctor_id'   => $doctor->id,
+                    'day_of_week' => strtolower($day),
+                    'start_time'  => $range['start_time'] . ':00',
+                    'end_time'    => $range['end_time'] . ':00',
+                ]);
+
             }
         }
-
-        return response()->json(['message' => 'Schedule added successfully.'], 200);
     }
+
+    return response()->json(['message' => 'Schedule saved successfully']);
+}
 }
