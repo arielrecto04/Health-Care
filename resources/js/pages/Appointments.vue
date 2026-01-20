@@ -63,22 +63,27 @@ const timeSlots = ref([]);
 const selectedTimeSlot = ref(null);
 
 async function fetchAvailableTimeSlots() {
-    if (!date.value || !selectedAppointmentType.value) return;
-
-    const serviceId = selectedAppointmentType.value?.value;
+    if (!date.value || !selectedAppointmentType.value) {
+        timeSlots.value = [];
+        selectedTimeSlot.value = null;
+        return;
+    }
 
     try {
         const response = await axios.get("/available-time-slots", {
             params: {
                 date: date.value.toISOString(),
-                service_id: serviceId,
-                hmo_id: selectedHmo.value,
+                service_id: selectedAppointmentType.value.value,
+                hmo_id: selectedHmo.value?.value || 0,
             },
         });
-        timeSlots.value = response.data;
-        console.log(response.data);
+
+        timeSlots.value = response.data || [];
+        selectedTimeSlot.value = null;
     } catch (err) {
         console.error("Error fetching available times:", err);
+        timeSlots.value = [];
+        selectedTimeSlot.value = null;
     }
 }
 
@@ -479,9 +484,9 @@ async function onSubmit() {
                                 <p>Available Time</p>
                                 <SelectButton
                                     v-if="timeSlots.length > 0"
-                                    :options="timeSlots"
                                     v-model="selectedTimeSlot"
-                                    class="select-time-btn grid! grid-cols-2 md:grid-cols-3 overflow-hidden p-2 bg-(--p-togglebutton-border-color)"
+                                    :options="timeSlots"
+                                    class="select-time-btn grid! grid-cols-2 md:grid-cols-3 overflow-hidden p-2"
                                     name="time_slot"
                                 />
                                 <p v-else class="text-gray-500">
